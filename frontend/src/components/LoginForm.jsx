@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import jwtDecode from 'jwt-decode';
 
 const LoginForm = ({ onLogin }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -18,11 +21,17 @@ const LoginForm = ({ onLogin }) => {
         },
       });
 
-      localStorage.setItem('token', response.data.access);
+      const token = response.data.access;
+      const decoded = jwtDecode(token);
+      const username = decoded.username;
+
+      localStorage.setItem('token', token);
       localStorage.setItem('refreshToken', response.data.refresh);
+      localStorage.setItem('username', username);
 
       setError('');
-      onLogin(response.data.access); // optionally pass token up
+      onLogin(token); // App will also update username
+      navigate('/');
     } catch (err) {
       console.error('Login error:', err.response || err);
       setError('Login failed. Please check your credentials.');
@@ -58,3 +67,4 @@ const LoginForm = ({ onLogin }) => {
 };
 
 export default LoginForm;
+

@@ -1,94 +1,72 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import Navbar from './components/Navbar';
+import Home from './pages/Home';
+import Search from './pages/Search';
+import Watchlist from './components/Watchlist';
+import Portfolio from './pages/Portfolio';
+import LoginForm from './components/LoginForm';
+import RiskCalculator from './pages/RiskCalculator';
+import jwtDecode from 'jwt-decode';
 import axios from 'axios';
-import ItemForm from './ItemForm';
-import ItemList from './ItemList';
-import StockSearch from './StockSearch';
-import Watchlist from './Watchlist';
-import LoginForm from './LoginForm';
+import Register from './pages/Register';
 
 function App() {
-  const [items, setItems] = useState([]);
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [username, setUsername] = useState(localStorage.getItem('username') || null);
   const [watchlist, setWatchlist] = useState([]);
-  const [token, setToken] = useState(localStorage.getItem('accessToken'));
-
-  // Apply token to all axios requests
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
-
-  const fetchItems = () => {
-    axios.get('/api/items/')
-      .then(response => setItems(response.data))
-      .catch(error => console.error('Error fetching items:', error));
-  };
-
-  const fetchWatchlist = () => {
-    axios.get('/api/stocks/watchlist/')
-      .then(response => setWatchlist(response.data))
-      .catch(error => console.error('Error fetching watchlist:', error));
-  };
 
   useEffect(() => {
-    if (token) {
-      fetchItems();
-      fetchWatchlist();
+    if (token && !username) {
+      const fetchUserInfo = async () => {
+        try {
+          const res = await axios.get('/api/user/', {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          setUsername(res.data.username);
+          localStorage.setItem('username', res.data.username);
+        } catch (err) {
+          console.error('Failed to fetch user info:', err);
+          setUsername(null);
+        }
+      };
+
+      fetchUserInfo();
     }
-  }, [token]);
-
-  const handleItemCreated = newItem => {
-    setItems(prevItems => [...prevItems, newItem]);
-  };
-
-  const handleItemUpdated = updatedItem => {
-    setItems(prevItems =>
-      prevItems.map(item => (item.id === updatedItem.id ? updatedItem : item))
-    );
-  };
-
-  const handleItemDeleted = deletedItemId => {
-    setItems(prevItems =>
-      prevItems.filter(item => item.id !== deletedItemId)
-    );
-  };
-
-  const handleLogin = (accessToken) => {
-    setToken(accessToken); // updates state and triggers useEffect
-  };
+  }, [token, username]);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('username');
     setToken(null);
+    setUsername(null);
+  };
+
+  const handleLogin = (token) => {
+    setToken(token);
+    localStorage.setItem('token', token);
+    // Username will be fetched by useEffect after setting token
   };
 
   return (
-    <div className="container mt-4">
-      <h1 className="mb-4">📈 StockCompanion</h1>
-
-      {!token ? (
-        <LoginForm onLogin={handleLogin} />
-      ) : (
-        <>
-          <button onClick={handleLogout} className="btn btn-outline-danger mb-3 float-end">
-            Logout
-          </button>
-
-          <StockSearch token={token} setWatchlist={setWatchlist}/>
-          <Watchlist watchlist={watchlist} setWatchlist={setWatchlist} token={token} />
-          <ItemForm onItemCreated={handleItemCreated} />
-          <ItemList 
-            items={items} 
-            onItemUpdated={handleItemUpdated} 
-            onItemDeleted={handleItemDeleted} 
-          />
-        </>
-      )}
-    </div>
+    <Router>
+      <Navbar token={token} username={username} handleLogout={handleLogout} />
+      <div className="container mt-4">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/search" element={<Search token={token} watchlist={watchlist} setWatchlist={setWatchlist} />} />
+          <Route path="/watchlist" element={<Watchlist token={token} watchlist={watchlist} setWatchlist={setWatchlist} />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/risk" element={<RiskCalculator />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

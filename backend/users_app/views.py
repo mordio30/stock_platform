@@ -1,9 +1,10 @@
 from rest_framework import status, permissions
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.serializers import Serializer, CharField
+from rest_framework.permissions import IsAuthenticated
 
 # Serializer for the registration
 class UserSerializer(Serializer):
@@ -40,3 +41,7 @@ def login(request):
         })
     return Response({"message": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+    return Response({'username': request.user.username})

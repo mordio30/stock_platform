@@ -4,8 +4,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import generics, permissions
 from .models import Watchlist
+from .models import PortfolioItem
+from .models import RiskCalculation
+from .serializers import RiskCalculationSerializer
 from .serializers import WatchlistSerializer
+from .serializers import PortfolioItemSerializer
 from .services import fetch_stock_data  # Importing your fetch_stock_data function
 
 # 🔎 Stock search (public)
@@ -86,4 +91,70 @@ def delete_watchlist_item(request, symbol):
         return Response({'message': f'{symbol} removed from watchlist.'}, status=200)
     else:
         return Response({'error': 'Item not found in your watchlist.'}, status=404)
+    
+# news API view
+@api_view(['GET'])
+def financial_news(request):
+    url = "https://newsdata.io/api/1/news"
+    params = {
+        'apikey': settings.NEWS_API_KEY,
+        'category': 'business',
+        'language': 'en',
+        'country': 'us'
+    }
 
+    try:
+        r = requests.get(url, params=params)
+        r.raise_for_status()
+        data = r.json()
+        articles = data.get('results', [])[:5]  # limit to 5 articles
+        return Response(articles)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+# 📥 Buy stock (add to portfolio)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def buy_stock(request):
+    serializer = PortfolioItemSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        return Response(serializer.data, status=201)
+    return Response(serializer.errors, status=400)
+
+# 📤 Sell stock (mark position as closed)
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def sell_stock(request, pk):
+    try:
+        item = PortfolioItem.objects.get(pk=pk, user=request.user)
+    except PortfolioItem.DoesNotExist:
+        return Response({'error': 'Position not found'}, status=404)
+
+    sell_price = request.data.get('sell_price')
+    if sell_price:
+        item.sell_price = sell_price
+        item.is_closed = True
+        item.save()
+        serializer = PortfolioItemSerializer(item)
+        return Response(serializer.data)
+
+    return Response({'error': 'sell_price is required'}, status=400)
+
+# 📊 View portfolio (GET)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def view_portfolio(request):
+    items = PortfolioItem.objects.filter(user=request.user)
+    serializer = PortfolioItemSerializer(items, many=True)
+    return Response(serializer.data)
+
+class RiskCalculationListCreateView(generics.ListCreateAPIView):
+    serializer_class = RiskCalculationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return RiskCalculation.objects.filter(user=self.request.user).order_by('-date_created')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
