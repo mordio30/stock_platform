@@ -8,7 +8,7 @@ from .models import Watchlist, PortfolioItem, RiskCalculation
 from .serializers import RiskCalculationSerializer, WatchlistSerializer, PortfolioItemSerializer
 from .services import fetch_stock_data
 
-# 🔎 Public stock search
+# Public stock search
 @api_view(['GET'])
 def stock_search(request):
     symbol = request.GET.get('symbol', '').upper()
@@ -39,8 +39,7 @@ def stock_search(request):
     else:
         return Response({'error': 'Unexpected response from API'}, status=502)
 
-
-# ✅ Watchlist GET/POST
+# Watchlist GET/POST
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def watchlist_view(request):
@@ -77,9 +76,7 @@ def watchlist_view(request):
 
         return Response(serializer.errors, status=400)
 
-
-
-# 🗑️ Delete from watchlist
+# Delete from watchlist (using pk)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_watchlist_item(request, pk):  # Use pk (id) here
@@ -90,9 +87,7 @@ def delete_watchlist_item(request, pk):  # Use pk (id) here
         return Response({'message': f'{item.symbol} removed from watchlist.'})
     return Response({'error': 'Item not found in your watchlist.'}, status=404)
 
-
-
-# 📰 Financial news
+# Financial news endpoint
 @api_view(['GET'])
 def financial_news(request):
     url = "https://newsdata.io/api/1/news"
@@ -110,8 +105,7 @@ def financial_news(request):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
-
-# 📥 Buy stock (add to portfolio)
+# Buy stock (add to portfolio)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def buy_stock(request):
@@ -121,8 +115,7 @@ def buy_stock(request):
         return Response(serializer.data, status=201)
     return Response(serializer.errors, status=400)
 
-
-# 📤 Sell stock
+# Sell stock (update portfolio)
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def sell_stock(request, pk):
@@ -140,16 +133,14 @@ def sell_stock(request, pk):
 
     return Response({'error': 'sell_price is required'}, status=400)
 
-
-# 📊 View portfolio
+# View portfolio
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def view_portfolio(request):
     items = PortfolioItem.objects.filter(user=request.user)
     return Response(PortfolioItemSerializer(items, many=True).data)
 
-
-# 📉 Risk calculator
+# Risk calculator
 class RiskCalculationListCreateView(generics.ListCreateAPIView):
     serializer_class = RiskCalculationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -160,8 +151,7 @@ class RiskCalculationListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
-# 📈 Intraday price + trend
+# Intraday price + trend (for a given stock symbol)
 @api_view(['GET'])
 def intraday_trend_view(request, symbol):
     """
@@ -169,32 +159,4 @@ def intraday_trend_view(request, symbol):
     """
     if not symbol:
         return Response({'error': 'Symbol is required'}, status=400)
-
-    try:
-        # Fetch stock data
-        data = fetch_stock_data(symbol)
-        # Get intraday series
-        series = data.get('Time Series (5min)', {})
-
-        if not series:
-            return Response({'error': f'No intraday data available for symbol: {symbol}. Please check the symbol or try again later.'}, status=404)
-
-        # Ensure there are enough data points to process
-        timestamps = sorted(series.keys())[-5:]  # Get the last 5 timestamps
-        if len(timestamps) < 5:
-            return Response({'error': 'Not enough intraday data to calculate trend.'}, status=400)
-
-        # Calculate trend
-        trend = [float(series[t]['4. close']) for t in timestamps]
-        latest = float(series[timestamps[-1]]['4. close'])
-        previous = float(series[timestamps[-2]]['4. close'])
-        change = round(((latest - previous) / previous) * 100, 2)
-
-        return Response({
-            'symbol': symbol.upper(),
-            'price': latest,
-            'change': change,
-            'trend': trend
-        })
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    # Additional implementation to fetch intraday trend

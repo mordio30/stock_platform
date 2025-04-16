@@ -1,15 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Sparklines, SparklinesLine } from 'react-sparklines';
 import { fetchIntradayStock } from '../utils/fetchStockData';
 
 const StockSearch = ({ token, watchlist, setWatchlist }) => {
+  const location = useLocation();
   const [symbol, setSymbol] = useState('');
   const [stockData, setStockData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [addMessage, setAddMessage] = useState('');
   const [trendData, setTrendData] = useState(null);
+
+  // 🔍 Parse query string like ?symbol=AAPL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlSymbol = params.get('symbol');
+    if (urlSymbol) {
+      setSymbol(urlSymbol.toUpperCase());
+    }
+  }, [location.search]);
+
+  // 🔁 Auto-run search when symbol is set via URL
+  useEffect(() => {
+    if (symbol) {
+      handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol]);
 
   const handleSearch = async () => {
     if (!symbol.trim()) {
@@ -61,7 +80,7 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
         const updatedList = await axios.get('/api/stocks/watchlist/', {
           headers: { Authorization: `Bearer ${token}` },
         });
-      
+
         const sorted = updatedList.data.sort((a, b) => a.symbol.localeCompare(b.symbol));
         setWatchlist(sorted);
       }
@@ -129,7 +148,7 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
               </div>
             </div>
 
-            {/* 🎨 Enhanced Sparkline */}
+            {/* 🎨 Sparkline Chart */}
             {trendData ? (
               <div className="mt-4">
                 <strong>Recent Trend:</strong>
