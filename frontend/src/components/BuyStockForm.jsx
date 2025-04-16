@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const BuyStockForm = () => {
+const BuyStockForm = ({ onTradeSuccess }) => {
   const [symbol, setSymbol] = useState('');
   const [quantity, setQuantity] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
@@ -26,6 +26,11 @@ const BuyStockForm = () => {
       setSymbol('');
       setQuantity('');
       setPurchasePrice('');
+
+      // 🚀 Trigger parent refresh callback if it exists
+      if (onTradeSuccess) {
+        onTradeSuccess();
+      }
     } catch (error) {
       console.error('Error buying stock:', error);
       setMessage('Failed to save trade');

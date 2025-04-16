@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import BuyStockForm from './BuyStockForm'; // ✅ Import your form
 
 const PortfolioList = () => {
   const [trades, setTrades] = useState([]);
   const [error, setError] = useState('');
+  const [refresh, setRefresh] = useState(false);
 
   const token = localStorage.getItem('token');
 
@@ -23,9 +25,8 @@ const PortfolioList = () => {
     };
 
     fetchTrades();
-  }, [token]);
+  }, [token, refresh]); // ✅ Include refresh
 
-  // ✅ Delete handler
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm('Are you sure you want to delete this trade?');
     if (!confirmDelete) return;
@@ -36,7 +37,7 @@ const PortfolioList = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setTrades((prev) => prev.filter((trade) => trade.id !== id));
+      setRefresh((prev) => !prev); // ✅ Trigger refresh
       alert('Trade deleted successfully.');
     } catch (err) {
       console.error('Error deleting trade:', err);
@@ -44,7 +45,6 @@ const PortfolioList = () => {
     }
   };
 
-  // ✅ Sell handler
   const handleSell = async (id) => {
     const sellPrice = prompt('Enter sell price:');
     if (!sellPrice || isNaN(sellPrice)) return alert('Invalid price');
@@ -59,24 +59,20 @@ const PortfolioList = () => {
           },
         }
       );
-      const updatedTrade = response.data;
-      setTrades((prev) =>
-        prev.map((trade) => (trade.id === id ? updatedTrade : trade))
-      );
+      console.log("Sell response:", response.data); // 🔍 Check for updated sell_price
+      setRefresh((prev) => !prev); // ✅ Trigger refresh
     } catch (err) {
       console.error('Error selling trade:', err);
       alert('Sell failed');
     }
   };
 
-  // ✅ Calculate profit/loss for each trade
   const calculatePL = (trade) => {
     if (!trade.sell_price) return null;
     const profit = (trade.sell_price - trade.purchase_price) * trade.quantity;
     return profit.toFixed(2);
   };
 
-  // ✅ Totals
   const totalValue = trades.reduce(
     (acc, trade) => acc + trade.quantity * trade.purchase_price,
     0
@@ -89,6 +85,7 @@ const PortfolioList = () => {
 
   return (
     <div className="mt-4">
+      <BuyStockForm onTradeSuccess={() => setRefresh((prev) => !prev)} /> {/* ✅ Trigger refresh after buying */}
       <h4>📊 My Portfolio</h4>
       {error && <p className="text-danger">{error}</p>}
       {trades.length === 0 ? (
@@ -136,7 +133,6 @@ const PortfolioList = () => {
               </tr>
             ))}
           </tbody>
-
           <tfoot>
             <tr>
               <td colSpan="8" className="text-end">

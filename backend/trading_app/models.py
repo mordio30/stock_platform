@@ -7,6 +7,7 @@ class Trade(models.Model):
     symbol = models.CharField(max_length=10)
     quantity = models.PositiveIntegerField()
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
+    sell_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # 👈 add this
     date_bought = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
