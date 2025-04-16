@@ -3,24 +3,18 @@ from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import generics, permissions
-from .models import Watchlist
-from .models import PortfolioItem
-from .models import RiskCalculation
-from .serializers import RiskCalculationSerializer
-from .serializers import WatchlistSerializer
-from .serializers import PortfolioItemSerializer
-from .services import fetch_stock_data  # Importing your fetch_stock_data function
+from rest_framework import status, generics, permissions
+from .models import Watchlist, PortfolioItem, RiskCalculation
+from .serializers import RiskCalculationSerializer, WatchlistSerializer, PortfolioItemSerializer
+from .services import fetch_stock_data
 
-# 🔎 Stock search (public)
+# 🔎 Public stock search
 @api_view(['GET'])
 def stock_search(request):
     symbol = request.GET.get('symbol', '').upper()
     if not symbol:
         return Response({'error': 'Symbol is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Fetch stock data using the service
     data = fetch_stock_data(symbol)
 
     if 'Global Quote' in data and data['Global Quote']:
@@ -38,61 +32,67 @@ def stock_search(request):
             'change_percent': quote.get('10. change percent'),
         }
         return Response(cleaned)
-
-    elif '01. symbol' in data:  # fallback if not using Global Quote
-        cleaned = {
-            'symbol': data.get('01. symbol'),
-            'price': data.get('05. price'),
-            'open': data.get('02. open'),
-            'high': data.get('03. high'),
-            'low': data.get('04. low'),
-            'volume': data.get('06. volume'),
-            'latest_trading_day': data.get('07. latest trading day'),
-            'previous_close': data.get('08. previous close'),
-            'change': data.get('09. change'),
-            'change_percent': data.get('10. change percent'),
-        }
-        return Response(cleaned)
-
     elif 'Note' in data:
-        return Response({'error': 'API rate limit exceeded'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        return Response({'error': 'API rate limit exceeded'}, status=429)
     elif 'Error Message' in data or not data:
-        return Response({'error': 'Stock not found or invalid symbol'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Stock not found or invalid symbol'}, status=404)
     else:
-        return Response({'error': 'Unexpected response from API'}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({'error': 'Unexpected response from API'}, status=502)
 
 
-# ✅ Watchlist GET/POST (authenticated)
+# ✅ Watchlist GET/POST
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def watchlist_view(request):
     if request.method == 'GET':
         watchlist = Watchlist.objects.filter(user=request.user)
-        serializer = WatchlistSerializer(watchlist, many=True)
-        return Response(serializer.data)
+        enriched = []
+
+        for item in watchlist:
+            stock_data = fetch_stock_data(item.symbol)
+            try:
+                price = float(stock_data['Global Quote']['05. price'])
+            except Exception:
+                price = "N/A"
+            enriched.append({
+                'id': item.id,  # Include the id here
+                'symbol': item.symbol,
+                'price': price
+            })
+
+        return Response(enriched)
 
     elif request.method == 'POST':
         serializer = WatchlistSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            symbol = serializer.validated_data['symbol'].upper()
+
+            # Prevent duplicates
+            exists = Watchlist.objects.filter(user=request.user, symbol=symbol).exists()
+            if exists:
+                return Response({'error': 'Symbol already in watchlist.'}, status=400)
+
+            serializer.save(user=request.user, symbol=symbol)
+            return Response(serializer.data, status=201)
+
+        return Response(serializer.errors, status=400)
 
 
-# 🗑️ Delete from watchlist (authenticated)
+
+# 🗑️ Delete from watchlist
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def delete_watchlist_item(request, symbol):
-    symbol = symbol.upper()  # Normalize
-    item = Watchlist.objects.filter(user=request.user, symbol=symbol).first()
+def delete_watchlist_item(request, pk):  # Use pk (id) here
+    item = Watchlist.objects.filter(user=request.user, pk=pk).first()  # Filter by id
 
     if item:
         item.delete()
-        return Response({'message': f'{symbol} removed from watchlist.'}, status=200)
-    else:
-        return Response({'error': 'Item not found in your watchlist.'}, status=404)
-    
-# news API view
+        return Response({'message': f'{item.symbol} removed from watchlist.'})
+    return Response({'error': 'Item not found in your watchlist.'}, status=404)
+
+
+
+# 📰 Financial news
 @api_view(['GET'])
 def financial_news(request):
     url = "https://newsdata.io/api/1/news"
@@ -102,15 +102,14 @@ def financial_news(request):
         'language': 'en',
         'country': 'us'
     }
-
     try:
         r = requests.get(url, params=params)
         r.raise_for_status()
-        data = r.json()
-        articles = data.get('results', [])[:5]  # limit to 5 articles
+        articles = r.json().get('results', [])[:5]
         return Response(articles)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
 
 # 📥 Buy stock (add to portfolio)
 @api_view(['POST'])
@@ -122,7 +121,8 @@ def buy_stock(request):
         return Response(serializer.data, status=201)
     return Response(serializer.errors, status=400)
 
-# 📤 Sell stock (mark position as closed)
+
+# 📤 Sell stock
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def sell_stock(request, pk):
@@ -136,19 +136,20 @@ def sell_stock(request, pk):
         item.sell_price = sell_price
         item.is_closed = True
         item.save()
-        serializer = PortfolioItemSerializer(item)
-        return Response(serializer.data)
+        return Response(PortfolioItemSerializer(item).data)
 
     return Response({'error': 'sell_price is required'}, status=400)
 
-# 📊 View portfolio (GET)
+
+# 📊 View portfolio
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def view_portfolio(request):
     items = PortfolioItem.objects.filter(user=request.user)
-    serializer = PortfolioItemSerializer(items, many=True)
-    return Response(serializer.data)
+    return Response(PortfolioItemSerializer(items, many=True).data)
 
+
+# 📉 Risk calculator
 class RiskCalculationListCreateView(generics.ListCreateAPIView):
     serializer_class = RiskCalculationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -158,3 +159,42 @@ class RiskCalculationListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+# 📈 Intraday price + trend
+@api_view(['GET'])
+def intraday_trend_view(request, symbol):
+    """
+    Get the intraday price trend for a given stock symbol.
+    """
+    if not symbol:
+        return Response({'error': 'Symbol is required'}, status=400)
+
+    try:
+        # Fetch stock data
+        data = fetch_stock_data(symbol)
+        # Get intraday series
+        series = data.get('Time Series (5min)', {})
+
+        if not series:
+            return Response({'error': f'No intraday data available for symbol: {symbol}. Please check the symbol or try again later.'}, status=404)
+
+        # Ensure there are enough data points to process
+        timestamps = sorted(series.keys())[-5:]  # Get the last 5 timestamps
+        if len(timestamps) < 5:
+            return Response({'error': 'Not enough intraday data to calculate trend.'}, status=400)
+
+        # Calculate trend
+        trend = [float(series[t]['4. close']) for t in timestamps]
+        latest = float(series[timestamps[-1]]['4. close'])
+        previous = float(series[timestamps[-2]]['4. close'])
+        change = round(((latest - previous) / previous) * 100, 2)
+
+        return Response({
+            'symbol': symbol.upper(),
+            'price': latest,
+            'change': change,
+            'trend': trend
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

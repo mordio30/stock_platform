@@ -7,7 +7,14 @@ const FinancialNews = () => {
 
   useEffect(() => {
     axios.get('http://127.0.0.1:8000/api/stocks/news/')
-      .then(response => setArticles(response.data))
+      .then(response => {
+        const filtered = response.data.filter(article =>
+          article.image_url &&
+          article.image_url !== 'https://example.com/broken.jpg' && // optionally add known broken URLs
+          article.image_url.startsWith('http')
+        );
+        setArticles(filtered);
+      })
       .catch(error => console.error('Error fetching news:', error));
   }, []);
 

@@ -12,4 +12,5 @@ urlpatterns = [
     path('portfolio/buy/', views.buy_stock),           # POST
     path('portfolio/sell/<int:pk>/', views.sell_stock), # PATCH
     path('risk/', views.RiskCalculationListCreateView.as_view(), name='risk-calculations'),
+    path('intraday/<str:symbol>/', views.intraday_trend_view, name='intraday_trend'),
 ]

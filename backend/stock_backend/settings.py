@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'cart_app',
     'users_app',
     'stocks_app',
+    'trading_app',
 ]
 
 MIDDLEWARE = [
@@ -149,6 +150,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 
 
-ALPHA_VANTAGE_API_KEY = 'S4ZNHAGPIWOERCF3'
+ALPHA_VANTAGE_KEY = config('ALPHA_VANTAGE_KEY')
+
 
 NEWS_API_KEY = config("NEWS_API_KEY")

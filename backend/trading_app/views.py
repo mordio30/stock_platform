@@ -3,7 +3,8 @@ from rest_framework import generics, permissions
 from .models import Trade
 from .serializers import TradeSerializer
 
-class TradeCreateView(generics.ListCreateAPIView):
+
+class TradeListCreateView(generics.ListCreateAPIView):
     serializer_class = TradeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -12,9 +13,8 @@ class TradeCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-# Create your views here.
 
-class TradeDetailView(generics.DestroyAPIView):
+class TradeDetailView(generics.RetrieveDestroyAPIView):
     serializer_class = TradeSerializer
     permission_classes = [permissions.IsAuthenticated]
 

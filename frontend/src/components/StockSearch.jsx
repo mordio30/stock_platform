@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Sparklines, SparklinesLine } from 'react-sparklines';
+import { fetchIntradayStock } from '../utils/fetchStockData';
 
 const StockSearch = ({ token, watchlist, setWatchlist }) => {
   const [symbol, setSymbol] = useState('');
@@ -7,6 +9,7 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [addMessage, setAddMessage] = useState('');
+  const [trendData, setTrendData] = useState(null);
 
   const handleSearch = async () => {
     if (!symbol.trim()) {
@@ -20,17 +23,18 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
       setError('');
       setStockData(null);
       setAddMessage('');
+      setTrendData(null);
 
       const response = await axios.get(`/api/stocks/search/?symbol=${symbol}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log('✅ Search success:', response.data);
       setStockData(response.data);
+
+      const trend = await fetchIntradayStock(symbol);
+      setTrendData(trend?.trend?.length ? trend.trend : null);
     } catch (error) {
-      console.error('❌ Search error:', error.response?.data || error.message);
+      console.error('Search error:', error.response?.data || error.message);
       setError(
         error.response?.status === 401
           ? 'Authentication failed. Please log in again.'
@@ -48,30 +52,25 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
       const response = await axios.post(
         '/api/stocks/watchlist/',
         { symbol: stockData.symbol },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log('✅ Added to watchlist:', response.data);
-      setAddMessage(`Added ${stockData.symbol} to watchlist.`);
+      setAddMessage(`✅ Added ${stockData.symbol} to watchlist.`);
       setError('');
+
       if (typeof setWatchlist === 'function') {
         const updatedList = await axios.get('/api/stocks/watchlist/', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-        setWatchlist(updatedList.data);
+      
+        const sorted = updatedList.data.sort((a, b) => a.symbol.localeCompare(b.symbol));
+        setWatchlist(sorted);
       }
     } catch (error) {
-      console.error('❌ Add to watchlist error:', error.response?.data || error.message);
-      setError('Failed to add to watchlist');
+      console.error('Add to watchlist error:', error.response?.data || error.message);
+      setError('❌ Failed to add to watchlist');
     }
   };
 
-  // ✅ Check if current stock is already in watchlist
   const isAlreadyInWatchlist =
     stockData &&
     watchlist?.some(
@@ -79,45 +78,88 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
     );
 
   return (
-    <div className="p-3 border rounded bg-light">
-      <h3 className="mb-3">Stock Search</h3>
-      <div className="mb-2 d-flex gap-2">
+    <div className="p-4 bg-white border rounded shadow-sm">
+      <h3 className="mb-4 text-primary">📈 Stock Lookup</h3>
+
+      <div className="input-group mb-3">
         <input
           type="text"
           value={symbol}
           onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-          placeholder="Enter stock symbol"
+          placeholder="Enter symbol (e.g., AAPL)"
           className="form-control"
         />
-        <button onClick={handleSearch} className="btn btn-primary" disabled={loading}>
+        <button
+          onClick={handleSearch}
+          className="btn btn-primary"
+          disabled={loading}
+        >
           {loading ? 'Searching...' : 'Search'}
         </button>
       </div>
 
-      {error && <p className="text-danger">{error}</p>}
-      {addMessage && <p className="text-success">{addMessage}</p>}
+      {error && <div className="alert alert-danger">{error}</div>}
+      {addMessage && <div className="alert alert-success">{addMessage}</div>}
 
       {stockData && (
-        <div className="mt-3">
-          <h4>{stockData.symbol}</h4>
-          <ul className="list-group mb-2">
-            <li className="list-group-item"><strong>Price:</strong> ${stockData.price}</li>
-            <li className="list-group-item"><strong>Open:</strong> ${stockData.open}</li>
-            <li className="list-group-item"><strong>High:</strong> ${stockData.high}</li>
-            <li className="list-group-item"><strong>Low:</strong> ${stockData.low}</li>
-            <li className="list-group-item"><strong>Volume:</strong> {stockData.volume}</li>
-            <li className="list-group-item"><strong>Previous Close:</strong> ${stockData.previous_close}</li>
-            <li className="list-group-item"><strong>Change:</strong> {stockData.change} ({stockData.change_percent})</li>
-            <li className="list-group-item"><strong>Latest Trading Day:</strong> {stockData.latest_trading_day}</li>
-          </ul>
+        <div className="card mt-4 shadow-sm">
+          <div className="card-body">
+            <h4 className="card-title">{stockData.symbol}</h4>
+            <div className="row">
+              <div className="col-md-6">
+                <ul className="list-group list-group-flush">
+                  <li className="list-group-item"><strong>Price:</strong> ${stockData.price}</li>
+                  <li className="list-group-item"><strong>Open:</strong> ${stockData.open}</li>
+                  <li className="list-group-item"><strong>High:</strong> ${stockData.high}</li>
+                  <li className="list-group-item"><strong>Low:</strong> ${stockData.low}</li>
+                </ul>
+              </div>
+              <div className="col-md-6">
+                <ul className="list-group list-group-flush">
+                  <li className="list-group-item"><strong>Volume:</strong> {stockData.volume}</li>
+                  <li className="list-group-item"><strong>Prev Close:</strong> ${stockData.previous_close}</li>
+                  <li className="list-group-item">
+                    <strong>Change:</strong>{' '}
+                    <span className={stockData.change >= 0 ? 'text-success' : 'text-danger'}>
+                      {stockData.change} ({stockData.change_percent})
+                    </span>
+                  </li>
+                  <li className="list-group-item"><strong>Latest Day:</strong> {stockData.latest_trading_day}</li>
+                </ul>
+              </div>
+            </div>
 
-          {!isAlreadyInWatchlist ? (
-            <button className="btn btn-outline-success" onClick={handleAddToWatchlist}>
-              ➕ Add to Watchlist
-            </button>
-          ) : (
-            <span className="badge bg-success">✔️ Already in Watchlist</span>
-          )}
+            {/* 🎨 Enhanced Sparkline */}
+            {trendData ? (
+              <div className="mt-4">
+                <strong>Recent Trend:</strong>
+                <div className="sparkline-container mt-2 bg-light p-3 rounded">
+                  <Sparklines data={trendData} width={200} height={60} margin={5}>
+                    <SparklinesLine
+                      color={stockData.change >= 0 ? '#28a745' : '#dc3545'}
+                      style={{ fill: 'none', strokeWidth: 3 }}
+                    />
+                    <SparklinesLine
+                      color={stockData.change >= 0 ? '#28a74555' : '#dc354555'}
+                      style={{ fill: stockData.change >= 0 ? '#28a74533' : '#dc354533', strokeWidth: 1 }}
+                    />
+                  </Sparklines>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted mt-3">No chart data available.</p>
+            )}
+
+            <div className="mt-4">
+              {!isAlreadyInWatchlist ? (
+                <button className="btn btn-outline-success" onClick={handleAddToWatchlist}>
+                  ➕ Add to Watchlist
+                </button>
+              ) : (
+                <span className="badge bg-success fs-6">✔️ Already in Watchlist</span>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -125,6 +167,3 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
 };
 
 export default StockSearch;
-
-
-

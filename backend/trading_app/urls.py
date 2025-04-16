@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import TradeCreateView, TradeDetailView
+from .views import TradeListCreateView, TradeDetailView
 
 urlpatterns = [
-    path('trades/', TradeCreateView.as_view(), name='trade-list-create'),
-    path('trades/<int:pk>/', TradeDetailView.as_view(), name='trade-delete'),
+    path('', TradeListCreateView.as_view(), name='trade-list-create'),            # GET and POST /api/trades/
+    path('<int:pk>/', TradeDetailView.as_view(), name='trade-delete'),   
 ]

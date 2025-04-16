@@ -24,6 +24,8 @@ urlpatterns = [
     path('api/items/', include('items_app.urls')),
     path('api/stocks/', include('stocks_app.urls')),
     
+    path('api/trades/', include('trading_app.urls')),  # 👈 ADD THIS LINE
+
     # 👇 ADD THESE TWO LINES
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
