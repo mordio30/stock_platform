@@ -17,21 +17,34 @@ const PortfolioChart = ({ refresh }) => {
 
         const data = response.data;
 
-        // Group trades by date and calculate total value
-        const valueByDate = {};
+        let cumulativeValue = 10000; // Starting cash value (you can adjust this amount)
+        const valueByDate = [];
 
         data.forEach(trade => {
-          const date = new Date(trade.date_bought).toLocaleDateString();
-          const value = trade.quantity * parseFloat(trade.purchase_price);
-          valueByDate[date] = (valueByDate[date] || 0) + value;
+          const dateObj = new Date(trade.date_bought);
+          const date = `${dateObj.toLocaleDateString()} ${dateObj.getHours()}:00`;
+          const purchaseValue = trade.quantity * parseFloat(trade.purchase_price);
+
+          // Add purchase value to cumulative value
+          cumulativeValue -= purchaseValue; // Subtract from cash balance when buying
+
+          // If a stock is sold, calculate profit/loss
+          if (trade.sell_price) {
+            const sellValue = trade.quantity * parseFloat(trade.sell_price);
+            const profitOrLoss = sellValue - purchaseValue; // This calculates the net gain/loss from the sale
+            cumulativeValue += profitOrLoss; // Update cumulative portfolio value with profit/loss
+          }
+
+          // Push the data with the date and cumulative value
+          valueByDate.push({ date, cumulativeValue });
         });
 
-        const chartArray = Object.entries(valueByDate).map(([date, totalValue]) => ({
-          date,
-          totalValue,
-        }));
+        // Sort chart data by date
+        valueByDate.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        setChartData(chartArray);
+        // Set chart data
+        setChartData(valueByDate);
+        
       } catch (err) {
         console.error('Error fetching chart data:', err);
       }
@@ -49,7 +62,7 @@ const PortfolioChart = ({ refresh }) => {
           <XAxis dataKey="date" />
           <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey="totalValue" stroke="#007bff" />
+          <Line type="monotone" dataKey="cumulativeValue" stroke="#007bff" />
         </LineChart>
       </ResponsiveContainer>
     </div>
