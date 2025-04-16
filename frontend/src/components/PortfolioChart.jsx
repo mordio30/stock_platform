@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 
-const PortfolioChart = () => {
+const PortfolioChart = ({ refresh }) => {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
@@ -26,30 +26,30 @@ const PortfolioChart = () => {
           valueByDate[date] = (valueByDate[date] || 0) + value;
         });
 
-        const formattedData = Object.keys(valueByDate).map(date => ({
+        const chartArray = Object.entries(valueByDate).map(([date, totalValue]) => ({
           date,
-          value: valueByDate[date].toFixed(2),
+          totalValue,
         }));
 
-        setChartData(formattedData);
+        setChartData(chartArray);
       } catch (err) {
-        console.error('Error fetching portfolio data:', err);
+        console.error('Error fetching chart data:', err);
       }
     };
 
     fetchTrades();
-  }, []);
+  }, [refresh]);
 
   return (
     <div className="mt-4">
-      <h5>📈 Portfolio Value Over Time</h5>
+      <h4>📈 Portfolio Value Over Time</h4>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="date" />
-          <YAxis domain={['auto', 'auto']} />
+          <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey="value" stroke="#007bff" strokeWidth={2} />
+          <Line type="monotone" dataKey="totalValue" stroke="#007bff" />
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import BuyStockForm from './BuyStockForm'; // ✅ Import your form
+import BuyStockForm from './BuyStockForm';
 
-const PortfolioList = () => {
+const PortfolioList = ({ refresh, setRefresh }) => {
   const [trades, setTrades] = useState([]);
   const [error, setError] = useState('');
-  const [refresh, setRefresh] = useState(false);
-
   const token = localStorage.getItem('token');
 
   useEffect(() => {
     const fetchTrades = async () => {
       try {
         const response = await axios.get('http://localhost:8000/api/trades/', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         setTrades(response.data);
       } catch (err) {
@@ -25,19 +21,16 @@ const PortfolioList = () => {
     };
 
     fetchTrades();
-  }, [token, refresh]); // ✅ Include refresh
+  }, [token, refresh]);
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this trade?');
-    if (!confirmDelete) return;
+    if (!window.confirm('Are you sure you want to delete this trade?')) return;
 
     try {
       await axios.delete(`http://localhost:8000/api/trades/${id}/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setRefresh((prev) => !prev); // ✅ Trigger refresh
+      setRefresh((prev) => !prev);
       alert('Trade deleted successfully.');
     } catch (err) {
       console.error('Error deleting trade:', err);
@@ -50,17 +43,14 @@ const PortfolioList = () => {
     if (!sellPrice || isNaN(sellPrice)) return alert('Invalid price');
 
     try {
-      const response = await axios.patch(
+      await axios.patch(
         `http://localhost:8000/api/trades/sell/${id}/`,
         { sell_price: parseFloat(sellPrice) },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-      console.log("Sell response:", response.data); // 🔍 Check for updated sell_price
-      setRefresh((prev) => !prev); // ✅ Trigger refresh
+      setRefresh((prev) => !prev);
     } catch (err) {
       console.error('Error selling trade:', err);
       alert('Sell failed');
@@ -85,7 +75,7 @@ const PortfolioList = () => {
 
   return (
     <div className="mt-4">
-      <BuyStockForm onTradeSuccess={() => setRefresh((prev) => !prev)} /> {/* ✅ Trigger refresh after buying */}
+      <BuyStockForm onTradeSuccess={() => setRefresh((prev) => !prev)} />
       <h4>📊 My Portfolio</h4>
       {error && <p className="text-danger">{error}</p>}
       {trades.length === 0 ? (
@@ -116,17 +106,11 @@ const PortfolioList = () => {
                 <td>{trade.sell_price ? 'Closed' : 'Open'}</td>
                 <td>
                   {!trade.sell_price && (
-                    <button
-                      className="btn btn-sm btn-success me-2"
-                      onClick={() => handleSell(trade.id)}
-                    >
+                    <button className="btn btn-sm btn-success me-2" onClick={() => handleSell(trade.id)}>
                       💰 Sell
                     </button>
                   )}
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleDelete(trade.id)}
-                  >
+                  <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(trade.id)}>
                     🗑️ Delete
                   </button>
                 </td>
