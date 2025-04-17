@@ -125,18 +125,34 @@ const RiskCalculator = () => {
         </Form>
 
         {results && (
-          <div className="mt-4">
-            <h5>📊 Results:</h5>
-            <ul>
-              <li>Risk per Share: ${results.risk.toFixed(2)}</li>
-              <li>Reward per Share: ${results.reward.toFixed(2)}</li>
-              <li>Risk-Reward Ratio: {results.ratio.toFixed(2)} : 1</li>
-            </ul>
-            <Button variant="success" onClick={handleSave}>
-              💾 Save Calculation
-            </Button>
-          </div>
+  <div className="mt-4">
+    <h5>📊 Results:</h5>
+    <ul>
+      <li><strong>Risk per Share:</strong> ${results.risk.toFixed(2)}</li>
+      <li><strong>Reward per Share:</strong> ${results.reward.toFixed(2)}</li>
+      <li>
+        <strong>Risk-Reward Ratio:</strong> {results.ratio.toFixed(2)} : 1{' '}
+        {results.ratio >= 2 ? (
+          <span className="text-success">(Excellent setup)</span>
+        ) : results.ratio >= 1 ? (
+          <span className="text-warning">(Acceptable risk)</span>
+        ) : (
+          <span className="text-danger">(Unfavorable trade)</span>
         )}
+      </li>
+    </ul>
+    <p className="mt-2">
+      {results.ratio >= 2
+        ? '✅ Great setup! Your potential reward significantly outweighs your risk.'
+        : results.ratio >= 1
+        ? '⚠️ Your reward is higher than your risk, but consider aiming for a 2:1 or better.'
+        : '❌ Your risk exceeds potential reward. Reconsider the setup or adjust your targets.'}
+    </p>
+    <Button variant="success" onClick={handleSave}>
+      💾 Save Calculation
+    </Button>
+  </div>
+)}
 
         {message && (
           <Alert variant={message.startsWith('✅') ? 'success' : 'warning'} className="mt-3">
