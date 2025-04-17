@@ -49,8 +49,8 @@ const RiskCalculator = () => {
       await axios.post(
         'http://localhost:8000/api/stocks/risk/',
         {
-          stock_name: symbol,
-          entry_price: buyPrice,
+          symbol: symbol,
+          buy_price: buyPrice,
           stop_loss: stopLoss,
           target_price: targetPrice,
           risk_per_share: risk.toFixed(2),

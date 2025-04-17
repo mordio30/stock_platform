@@ -25,7 +25,7 @@ const RiskCalculationList = () => {
 
   const handleDelete = async (id) => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('token');
       await axios.delete(`/api/stocks/risk/${id}/`, {
         headers: {
           Authorization: `Bearer ${token}`,
