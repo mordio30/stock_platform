@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Button, Card, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import RiskCalculationList from '../components/RiskCalculationList';
 
 const RiskCalculator = () => {
   const [symbol, setSymbol] = useState('');
@@ -31,33 +32,41 @@ const RiskCalculator = () => {
   };
 
   const handleSave = async () => {
-    const token = localStorage.getItem('access');
+    const token = localStorage.getItem('token');
     if (!token) {
       setMessage('🔒 Please log in to save your calculation.');
       return;
     }
 
+    const buy = parseFloat(buyPrice);
+    const stop = parseFloat(stopLoss);
+    const target = parseFloat(targetPrice);
+    const risk = buy - stop;
+    const reward = target - buy;
+    const ratio = reward / risk;
+
     try {
       await axios.post(
         'http://localhost:8000/api/stocks/risk/',
         {
-          symbol,
-          buy_price: buyPrice,
+          stock_name: symbol,
+          entry_price: buyPrice,
           stop_loss: stopLoss,
           target_price: targetPrice,
-          risk_per_share: results.risk,
-          reward_per_share: results.reward,
-          risk_reward_ratio: results.ratio,
+          risk_per_share: risk.toFixed(2),
+          reward_per_share: reward.toFixed(2),
+          risk_reward_ratio: ratio.toFixed(2),
         },
         {
           headers: {
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         }
       );
       setMessage('✅ Calculation saved successfully!');
     } catch (error) {
-      console.error('Save failed:', error);
+      console.error('Save failed:', error.response?.data || error.message);
       setMessage('❌ Failed to save. Check your login or try again.');
     }
   };
@@ -135,6 +144,10 @@ const RiskCalculator = () => {
           </Alert>
         )}
       </Card>
+
+      <div className="mt-5">
+        <RiskCalculationList />
+      </div>
     </div>
   );
 };

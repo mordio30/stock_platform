@@ -160,3 +160,24 @@ def intraday_trend_view(request, symbol):
     if not symbol:
         return Response({'error': 'Symbol is required'}, status=400)
     # Additional implementation to fetch intraday trend
+
+class RiskCalculationDetailView(generics.DestroyAPIView):
+    serializer_class = RiskCalculationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return RiskCalculation.objects.filter(user=self.request.user)
+    
+    def perform_create(self, serializer):
+        instance = serializer.save(user=self.request.user)
+
+        # Calculate values before saving
+        instance.risk_per_share = float(instance.buy_price) - float(instance.stop_loss)
+        instance.reward_per_share = float(instance.target_price) - float(instance.buy_price)
+
+        try:
+            instance.risk_reward_ratio = instance.reward_per_share / instance.risk_per_share if instance.risk_per_share else 0
+        except ZeroDivisionError:
+            instance.risk_reward_ratio = 0
+
+        instance.save()
