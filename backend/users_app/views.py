@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.serializers import Serializer, CharField
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
 # Serializer for the registration
 class UserSerializer(Serializer):
@@ -45,3 +46,11 @@ def login(request):
 @permission_classes([IsAuthenticated])
 def current_user(request):
     return Response({'username': request.user.username})
+
+class DeleteUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        user.delete()
+        return Response({"message": "Your account has been deleted."}, status=204)
