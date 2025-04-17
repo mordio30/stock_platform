@@ -73,6 +73,30 @@ const PortfolioList = ({ refresh, setRefresh }) => {
     return acc + (trade.sell_price - trade.purchase_price) * trade.quantity;
   }, 0);
 
+  // ROI %
+  const roi = totalValue > 0 ? ((totalPL / totalValue) * 100).toFixed(2) : 0;
+
+  // Simulated Balance
+  let simulatedBalance = 10000;
+  trades.forEach(trade => {
+    const purchaseCost = trade.quantity * trade.purchase_price;
+    simulatedBalance -= purchaseCost;
+
+    if (trade.sell_price) {
+      const saleValue = trade.quantity * trade.sell_price;
+      const profit = saleValue - purchaseCost;
+      simulatedBalance += profit;
+    }
+  });
+
+  // Total Sold Value
+  const totalSold = trades.reduce((acc, trade) => {
+    if (trade.sell_price) {
+      return acc + (trade.sell_price * trade.quantity);
+    }
+    return acc;
+  }, 0);
+
   return (
     <div className="mt-4">
       <BuyStockForm onTradeSuccess={() => setRefresh((prev) => !prev)} />
@@ -121,7 +145,10 @@ const PortfolioList = ({ refresh, setRefresh }) => {
             <tr>
               <td colSpan="8" className="text-end">
                 <strong>Total Invested: </strong>${totalValue.toFixed(2)}<br />
-                <strong>Total P/L: </strong>${totalPL.toFixed(2)}
+                <strong>Total P/L: </strong>${totalPL.toFixed(2)}<br />
+                <strong>ROI: </strong>{roi}%<br />
+                <strong>Simulated Balance: </strong>${simulatedBalance.toFixed(2)}<br />
+                <strong>Total Sold Value: </strong>${totalSold.toFixed(2)}
               </td>
             </tr>
           </tfoot>
@@ -132,3 +159,4 @@ const PortfolioList = ({ refresh, setRefresh }) => {
 };
 
 export default PortfolioList;
+
