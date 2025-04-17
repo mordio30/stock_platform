@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Button, Table } from 'react-bootstrap';
 
-const RiskCalculationList = () => {
+const RiskCalculationList = ({ refresh }) => {
   const [calculations, setCalculations] = useState([]);
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const RiskCalculationList = () => {
     };
 
     fetchRiskCalcs();
-  }, []);
+  }, [refresh]); // 👈 re-fetch on refresh change
 
   const handleDelete = async (id) => {
     try {
@@ -62,10 +62,16 @@ const RiskCalculationList = () => {
                 <td>${calc.buy_price}</td>
                 <td>${calc.stop_loss}</td>
                 <td>${calc.target_price}</td>
-                <td>{calc.risk_reward_ratio}</td>
-                <td>{new Date(calc.date_created).toLocaleDateString()}</td>
+                <td>{calc.risk_reward_ratio} : 1</td>
                 <td>
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(calc.id)}>
+                  {calc.date_created ? new Date(calc.date_created.replace(' ', 'T')).toLocaleDateString() : 'N/A'}
+                </td>
+                <td>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDelete(calc.id)}
+                  >
                     Delete
                   </Button>
                 </td>

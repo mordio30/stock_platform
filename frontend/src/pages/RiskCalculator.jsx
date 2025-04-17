@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Form, Button, Card, Alert } from 'react-bootstrap';
 import axios from 'axios';
 import RiskCalculationList from '../components/RiskCalculationList';
@@ -10,6 +10,9 @@ const RiskCalculator = () => {
   const [targetPrice, setTargetPrice] = useState('');
   const [results, setResults] = useState(null);
   const [message, setMessage] = useState('');
+  const [refresh, setRefresh] = useState(false); // 👈 added for triggering refresh
+
+  const listRef = useRef(null); // 👈 ref for scrolling
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -64,7 +67,19 @@ const RiskCalculator = () => {
           },
         }
       );
+
       setMessage('✅ Calculation saved successfully!');
+      setRefresh(prev => !prev); // 🔁 trigger refresh in list
+      setResults(null); // 💡 clear results box
+      setSymbol(''); // 🧹 clear form
+      setBuyPrice('');
+      setStopLoss('');
+      setTargetPrice('');
+
+      // ⬇️ scroll to saved list
+      setTimeout(() => {
+        listRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
     } catch (error) {
       console.error('Save failed:', error.response?.data || error.message);
       setMessage('❌ Failed to save. Check your login or try again.');
@@ -125,34 +140,34 @@ const RiskCalculator = () => {
         </Form>
 
         {results && (
-  <div className="mt-4">
-    <h5>📊 Results:</h5>
-    <ul>
-      <li><strong>Risk per Share:</strong> ${results.risk.toFixed(2)}</li>
-      <li><strong>Reward per Share:</strong> ${results.reward.toFixed(2)}</li>
-      <li>
-        <strong>Risk-Reward Ratio:</strong> {results.ratio.toFixed(2)} : 1{' '}
-        {results.ratio >= 2 ? (
-          <span className="text-success">(Excellent setup)</span>
-        ) : results.ratio >= 1 ? (
-          <span className="text-warning">(Acceptable risk)</span>
-        ) : (
-          <span className="text-danger">(Unfavorable trade)</span>
+          <div className="mt-4">
+            <h5>📊 Results:</h5>
+            <ul>
+              <li><strong>Risk per Share:</strong> ${results.risk.toFixed(2)}</li>
+              <li><strong>Reward per Share:</strong> ${results.reward.toFixed(2)}</li>
+              <li>
+                <strong>Risk-Reward Ratio:</strong> {results.ratio.toFixed(2)} : 1{' '}
+                {results.ratio >= 2 ? (
+                  <span className="text-success">(Excellent setup)</span>
+                ) : results.ratio >= 1 ? (
+                  <span className="text-warning">(Acceptable risk)</span>
+                ) : (
+                  <span className="text-danger">(Unfavorable trade)</span>
+                )}
+              </li>
+            </ul>
+            <p className="mt-2">
+              {results.ratio >= 2
+                ? '✅ Great setup! Your potential reward significantly outweighs your risk.'
+                : results.ratio >= 1
+                  ? '⚠️ Your reward is higher than your risk, but consider aiming for a 2:1 or better.'
+                  : '❌ Your risk exceeds potential reward. Reconsider the setup or adjust your targets.'}
+            </p>
+            <Button variant="success" onClick={handleSave}>
+              💾 Save Calculation
+            </Button>
+          </div>
         )}
-      </li>
-    </ul>
-    <p className="mt-2">
-      {results.ratio >= 2
-        ? '✅ Great setup! Your potential reward significantly outweighs your risk.'
-        : results.ratio >= 1
-        ? '⚠️ Your reward is higher than your risk, but consider aiming for a 2:1 or better.'
-        : '❌ Your risk exceeds potential reward. Reconsider the setup or adjust your targets.'}
-    </p>
-    <Button variant="success" onClick={handleSave}>
-      💾 Save Calculation
-    </Button>
-  </div>
-)}
 
         {message && (
           <Alert variant={message.startsWith('✅') ? 'success' : 'warning'} className="mt-3">
@@ -161,8 +176,8 @@ const RiskCalculator = () => {
         )}
       </Card>
 
-      <div className="mt-5">
-        <RiskCalculationList />
+      <div className="mt-5" ref={listRef}>
+        <RiskCalculationList refresh={refresh} /> {/* 👈 now takes refresh */}
       </div>
     </div>
   );
