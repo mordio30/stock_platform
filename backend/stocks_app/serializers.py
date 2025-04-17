@@ -42,18 +42,20 @@ class RiskCalculationSerializer(serializers.ModelSerializer):
         return obj.risk_reward_ratio
 
     def create(self, validated_data):
-        # Manually calculate the risk/reward values before creating the object
+        # Retrieve the relevant data
         buy_price = validated_data.get('buy_price')
         stop_loss = validated_data.get('stop_loss')
         target_price = validated_data.get('target_price')
 
+        # Perform the calculations
         risk_per_share = buy_price - stop_loss
         reward_per_share = target_price - buy_price
         risk_reward_ratio = reward_per_share / risk_per_share if risk_per_share != 0 else 0
 
-        # Now create the RiskCalculation object with the calculated fields
+        # Add calculated values to validated data
         validated_data['risk_per_share'] = risk_per_share
         validated_data['reward_per_share'] = reward_per_share
         validated_data['risk_reward_ratio'] = risk_reward_ratio
 
+        # Now create the RiskCalculation object with the calculated fields
         return super().create(validated_data)
