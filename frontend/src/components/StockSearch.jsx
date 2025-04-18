@@ -1,28 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Sparklines, SparklinesLine } from 'react-sparklines';
 import { fetchIntradayStock } from '../utils/fetchStockData';
 
 const StockSearch = ({ token, watchlist, setWatchlist }) => {
-  const location = useLocation();
-  const [symbol, setSymbol] = useState('');
+  const { symbol: routeSymbol } = useParams();
+  const [symbol, setSymbol] = useState(routeSymbol?.toUpperCase() || '');
   const [stockData, setStockData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [addMessage, setAddMessage] = useState('');
   const [trendData, setTrendData] = useState(null);
 
-  // 🔍 Parse query string like ?symbol=AAPL
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const urlSymbol = params.get('symbol');
-    if (urlSymbol) {
-      setSymbol(urlSymbol.toUpperCase());
+    if (routeSymbol) {
+      setSymbol(routeSymbol.toUpperCase());
     }
-  }, [location.search]);
+  }, [routeSymbol]);
 
-  // 🔁 Auto-run search when symbol is set via URL
   useEffect(() => {
     if (symbol) {
       handleSearch();
@@ -175,7 +171,7 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
                   ➕ Add to Watchlist
                 </button>
               ) : (
-                <span className="badge bg-success fs-6">✔️ Already in Watchlist</span>
+                <p className="text-success">✅ Already in watchlist</p>
               )}
             </div>
           </div>

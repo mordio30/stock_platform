@@ -103,7 +103,9 @@ const Watchlist = () => {
         watchlist.map((item) => (
           <Card key={item.id}>
             <Card.Body>
-              <Card.Title>{item.symbol}</Card.Title>
+            <Card.Title>
+              <Link to={`/stocks/${item.symbol}`}>{item.symbol}</Link>
+            </Card.Title>
               <Card.Text>
                 {stockData[item.symbol]?.latestPrice ? (
                   <span>

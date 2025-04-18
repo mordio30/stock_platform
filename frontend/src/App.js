@@ -11,6 +11,7 @@ import RiskCalculator from './pages/RiskCalculator';
 import jwtDecode from 'jwt-decode';
 import axios from 'axios';
 import Register from './pages/Register';
+import StockSearch from './components/StockSearch';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -64,6 +65,13 @@ function App() {
           <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
           <Route path="/register" element={<Register />} />
           <Route path="/risk" element={<RiskCalculator />} />
+
+          <Route
+            path="/stocks/:symbol"
+            element={<StockSearch token={token} watchlist={watchlist} setWatchlist={setWatchlist} />}
+          />
+
+
         </Routes>
       </div>
     </Router>
