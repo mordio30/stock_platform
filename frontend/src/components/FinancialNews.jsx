@@ -23,7 +23,7 @@ const FinancialNews = () => {
       <h2 className="my-4">Latest Financial News</h2>
       <Row xs={1} md={2} lg={2} className="g-4">
         {articles.map(article => (
-          <Col key={article.article_id}>
+          <Col key={article.article_id} className='d-flex'>
             <Card className="shadow-sm">
               <Card.Img variant="top" src={article.image_url} alt={article.title} />
               <Card.Body>

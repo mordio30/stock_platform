@@ -31,7 +31,7 @@ const AppNavbar = ({ token, username, handleLogout }) => {
   };
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg">
+    <Navbar bg="dark" variant="dark" expand="lg" sticky="top" className="shadow-sm">
       <Container>
         <Navbar.Brand as={Link} to="/">StockCompanion</Navbar.Brand>
         <Navbar.Toggle aria-controls="navbar" />
