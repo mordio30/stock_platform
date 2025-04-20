@@ -6,7 +6,8 @@ import { fetchIntradayStock } from '../utils/fetchStockData';
 
 const StockSearch = ({ token, watchlist, setWatchlist }) => {
   const { symbol: routeSymbol } = useParams();
-  const [symbol, setSymbol] = useState(routeSymbol?.toUpperCase() || '');
+  const [inputSymbol, setInputSymbol] = useState('');
+  const [symbol, setSymbol] = useState('');
   const [stockData, setStockData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,7 +16,9 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
 
   useEffect(() => {
     if (routeSymbol) {
-      setSymbol(routeSymbol.toUpperCase());
+      const upper = routeSymbol.toUpperCase();
+      setSymbol(upper);
+      setInputSymbol(upper);
     }
   }, [routeSymbol]);
 
@@ -25,6 +28,11 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSymbol(inputSymbol.toUpperCase().trim());
+  };
 
   const handleSearch = async () => {
     if (!symbol.trim()) {
@@ -36,8 +44,8 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
     try {
       setLoading(true);
       setError('');
-      setStockData(null);
       setAddMessage('');
+      setStockData(null);
       setTrendData(null);
 
       const response = await axios.get(`/api/stocks/search/?symbol=${symbol}`, {
@@ -96,22 +104,22 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
     <div className="p-4 bg-white border rounded shadow-sm">
       <h3 className="mb-4 text-primary">📈 Stock Lookup</h3>
 
-      <div className="input-group mb-3">
+      <form onSubmit={handleSubmit} className="input-group mb-3">
         <input
           type="text"
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+          value={inputSymbol}
+          onChange={(e) => setInputSymbol(e.target.value)}
           placeholder="Enter symbol (e.g., AAPL)"
           className="form-control"
         />
         <button
-          onClick={handleSearch}
+          type="submit"
           className="btn btn-primary"
           disabled={loading}
         >
           {loading ? 'Searching...' : 'Search'}
         </button>
-      </div>
+      </form>
 
       {error && <div className="alert alert-danger">{error}</div>}
       {addMessage && <div className="alert alert-success">{addMessage}</div>}
@@ -139,41 +147,27 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
                       {stockData.change} ({stockData.change_percent})
                     </span>
                   </li>
-                  <li className="list-group-item"><strong>Latest Day:</strong> {stockData.latest_trading_day}</li>
                 </ul>
               </div>
             </div>
 
-            {/* 🎨 Sparkline Chart */}
-            {trendData ? (
+            {trendData && (
               <div className="mt-4">
-                <strong>Recent Trend:</strong>
-                <div className="sparkline-container mt-2 bg-light p-3 rounded">
-                  <Sparklines data={trendData} width={200} height={60} margin={5}>
-                    <SparklinesLine
-                      color={stockData.change >= 0 ? '#28a745' : '#dc3545'}
-                      style={{ fill: 'none', strokeWidth: 3 }}
-                    />
-                    <SparklinesLine
-                      color={stockData.change >= 0 ? '#28a74555' : '#dc354555'}
-                      style={{ fill: stockData.change >= 0 ? '#28a74533' : '#dc354533', strokeWidth: 1 }}
-                    />
-                  </Sparklines>
-                </div>
+                <h5>Intraday Trend</h5>
+                <Sparklines data={trendData}>
+                  <SparklinesLine color="blue" />
+                </Sparklines>
               </div>
-            ) : (
-              <p className="text-muted mt-3">No chart data available.</p>
             )}
 
-            <div className="mt-4">
-              {!isAlreadyInWatchlist ? (
-                <button className="btn btn-outline-success" onClick={handleAddToWatchlist}>
-                  ➕ Add to Watchlist
-                </button>
-              ) : (
-                <p className="text-success">✅ Already in watchlist</p>
-              )}
-            </div>
+            {!isAlreadyInWatchlist && (
+              <button
+                onClick={handleAddToWatchlist}
+                className="btn btn-outline-success mt-3"
+              >
+                ➕ Add to Watchlist
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -182,3 +176,4 @@ const StockSearch = ({ token, watchlist, setWatchlist }) => {
 };
 
 export default StockSearch;
+
