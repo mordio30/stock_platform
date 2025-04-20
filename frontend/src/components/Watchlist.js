@@ -49,8 +49,11 @@ const Watchlist = () => {
               },
             });
 
+            if (!res.data || !res.data['Time Series (60min)']) {
+              throw new Error(`No time series data for ${stock.symbol}`);
+            }
+            
             const timeSeries = res.data['Time Series (60min)'];
-            if (!timeSeries) throw new Error(`No data for ${stock.symbol}`);
 
             const chartData = Object.entries(timeSeries)
               .slice(0, 10)
@@ -95,42 +98,33 @@ const Watchlist = () => {
   };
 
   return (
-    <div>
-      <h2>Watchlist</h2>
+    <div className="container">
+      <h2 className="mb-4">Watchlist</h2>
       {loading ? (
         <Spinner animation="border" />
       ) : (
-        watchlist.map((item) => (
-          <Card key={item.id}>
-            <Card.Body>
-            <Card.Title>
-              <Link to={`/stocks/${item.symbol}`}>{item.symbol}</Link>
-            </Card.Title>
-              <Card.Text>
-                {stockData[item.symbol]?.latestPrice ? (
-                  <span>
-                    Latest Price: {stockData[item.symbol].latestPrice}
-                  </span>
-                ) : (
-                  'Loading...'
-                )}
-              </Card.Text>
-              {stockData[item.symbol]?.chartData && (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={stockData[item.symbol].chartData}>
-                    <XAxis dataKey="time" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="price" stroke="#8884d8" />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-              <Button variant="danger" onClick={() => handleDelete(item.id)}>
-                Remove
-              </Button>
-            </Card.Body>
-          </Card>
-        ))
+        <div className="row">
+          {watchlist.map((item) => (
+            <div key={item.id} className="col-md-4 mb-4">
+              <Card className="text-center shadow-sm watchlist-card h-100">
+                <Card.Body>
+                  <Card.Title className="mb-3">
+                    <Link to={`/stocks/${item.symbol}`} className="text-decoration-none fw-bold">
+                      {item.symbol}
+                    </Link>
+                  </Card.Title>
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => handleDelete(item.id)}
+                  >
+                    Remove
+                  </Button>
+                </Card.Body>
+              </Card>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
