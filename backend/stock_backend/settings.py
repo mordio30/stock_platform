@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    # 'items_app',
     'users_app',
     'stocks_app',
     'trading_app',
